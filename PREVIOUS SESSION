@@ -1,0 +1,102 @@
+from getpass import getpass
+import os
+
+# Enter your GitHub username
+username = "username77777773"
+
+# Securely enter your GitHub token
+token = getpass("Enter your GitHub token: ")
+
+# Corrected repository URL (must end with .git)
+repo_url = f"https://{username}:{token}@github.com/{username}/stock-price-prediction-lstm.git"
+
+# Clone the private repository
+!git clone {repo_url}
+
+
+
+
+
+%cd /root/stock-price-prediction-lstm/
+!pwd
+!git pull origin main
+
+!python scripts/data_collection.py
+%cd  /root/stock-price-prediction-lstm/
+
+
+
+CREATE STRUCTURE
+import os
+
+# Step 1: Navigate to the project root
+os.chdir("/root/stock-price-prediction-lstm/")  # Ensure you're in the right directory
+
+# Step 2: Create required folders
+folders = ["data", "models", "notebooks", "scripts"]
+for folder in folders:
+    os.makedirs(folder, exist_ok=True)
+
+# Step 3: Create empty files inside the folders
+files = {
+    "scripts": ["data_collection.py", "preprocess_data.py", "train_model.py", "real_time_update.py", "predict.py"],
+    "notebooks": ["01_data_preprocessing.ipynb", "02_train_lstm.ipynb", "03_real_time_update.ipynb", "04_prediction.ipynb"],
+    "": ["README.md", "requirements.txt"]  # Files in the root directory
+}
+
+for folder, filenames in files.items():
+    for filename in filenames:
+        file_path = os.path.join("/root/stock-price-prediction-lstm/", folder, filename) if folder else os.path.join("/root/stock-price-prediction-lstm/", filename)
+        if not os.path.exists(file_path):
+            with open(file_path, "w") as f:
+                f.write("")  # Create an empty file
+
+# Step 4: Verify the structure
+print("✅ Project structure created successfully!")
+os.system("ls -R")  # Lists all directories and files
+
+# Step 5: Commit the structure to GitHub
+os.system("git add .")
+os.system('git commit -m "Created project folder structure"')
+os.system("git push origin main")
+print("✅ Project structure committed to GitHub!")
+
+
+!ls -R
+
+
+!python scripts/data_collection.py
+!python scripts/preprocess_data.py
+!ls -lh data/ #check if files are created successfully
+
+
+import numpy as np   #view the shape of the data
+
+X = np.load("data/X.npy")
+y_high = np.load("data/y_high.npy")
+y_low = np.load("data/y_low.npy")
+
+print(f"X shape: {X.shape}, y_high shape: {y_high.shape}, y_low shape: {y_low.shape}")
+
+
+
+
+!python scripts/train_model.
+
+from tensorflow.python.framework.test_util import is_gpu_available
+print("Is GPU available:", is_gpu_available())
+
+
+
+
+
+
+!git add .
+!git commit -m "Saving before switching to GPU"
+!git push origin main
+
+
+
+
+
+
