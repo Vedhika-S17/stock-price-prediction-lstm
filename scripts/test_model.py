@@ -1,6 +1,46 @@
 import numpy as np
 import os
 import tensorflow as tf
+from tensorflow.keras.models import load_model
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+# ✅ Load the trained model
+model = load_model("models/lstm_model_test.keras")
+print("✅ Loaded model: models/lstm_model_test.keras")
+
+# ✅ Load preprocessed data
+X = np.load("data/X.npy")
+y_high = np.load("data/y_high.npy")
+y_low = np.load("data/y_low.npy")
+
+# ✅ Split Data into 75% Training & 25% Testing
+test_size = int(len(X) * 0.25)
+X_test, y_test_high, y_test_low = X[-test_size:], y_high[-test_size:], y_low[-test_size:]
+
+# ✅ Make Predictions
+y_pred = model.predict(X_test)
+
+# ✅ Compute RMSE & MAE
+def rmse(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))
+
+rmse_high = rmse(y_test_high, y_pred[:, 0])
+rmse_low = rmse(y_test_low, y_pred[:, 1])
+mae_high = mean_absolute_error(y_test_high, y_pred[:, 0])
+mae_low = mean_absolute_error(y_test_low, y_pred[:, 1])
+
+print(f"📊 Model Evaluation:")
+print(f"🔹 RMSE High: {rmse_high:.2f}, RMSE Low: {rmse_low:.2f}")
+print(f"🔹 MAE High: {mae_high:.2f}, MAE Low: {mae_low:.2f}")
+
+
+
+
+'''
+
+import numpy as np
+import os
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Input, LSTM, Dense, Dropout
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -56,3 +96,5 @@ print(f"🔹 MAE High: {mae_high:.2f}, MAE Low: {mae_low:.2f}")
 # ✅ Save the New Trained Model
 model.save("models/lstm_model_test.keras")
 print("✅ Model trained & saved as lstm_model_test.keras")
+
+'''
