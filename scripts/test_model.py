@@ -1,100 +1,108 @@
 import numpy as np
-import os
-import tensorflow as tf
+import pandas as pd
+import joblib
+import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-
-# ✅ Load the trained model
-model = load_model("models/lstm_model_test.keras")
-print("✅ Loaded model: models/lstm_model_test.keras")
-
-# ✅ Load preprocessed data
-X = np.load("data/X.npy")
-y_high = np.load("data/y_high.npy")
-y_low = np.load("data/y_low.npy")
-
-# ✅ Split Data into 75% Training & 25% Testing
-test_size = int(len(X) * 0.25)
-X_test, y_test_high, y_test_low = X[-test_size:], y_high[-test_size:], y_low[-test_size:]
-
-# ✅ Make Predictions
-y_pred = model.predict(X_test)
-
-# ✅ Compute RMSE & MAE
-def rmse(y_true, y_pred):
-    return np.sqrt(mean_squared_error(y_true, y_pred))
-
-rmse_high = rmse(y_test_high, y_pred[:, 0])
-rmse_low = rmse(y_test_low, y_pred[:, 1])
-mae_high = mean_absolute_error(y_test_high, y_pred[:, 0])
-mae_low = mean_absolute_error(y_test_low, y_pred[:, 1])
-
-print(f"📊 Model Evaluation:")
-print(f"🔹 RMSE High: {rmse_high:.2f}, RMSE Low: {rmse_low:.2f}")
-print(f"🔹 MAE High: {mae_high:.2f}, MAE Low: {mae_low:.2f}")
-
-
-
-
-'''
-
-import numpy as np
+from sklearn.metrics import (
+    mean_squared_error, mean_absolute_error, r2_score,
+    mean_absolute_percentage_error, explained_variance_score
+)
 import os
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, LSTM, Dense, Dropout
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from IPython.display import Image, display
 
-# ✅ Ensure models directory exists
-os.makedirs("models", exist_ok=True)
+# Load data
+df = pd.read_csv("data/AAPL_processed.csv")
+df["Date"] = pd.to_datetime(df["Date"])
+df.set_index("Date", inplace=True)
+data = df[["High", "Low"]].values
 
-# ✅ Load preprocessed data
-X = np.load("data/X.npy")
-y_high = np.load("data/y_high.npy")
-y_low = np.load("data/y_low.npy")
+# Load scaler
+scaler = joblib.load("models/scaler.save")
+scaled_data = scaler.transform(data)
 
-# ✅ Split Data into 75% Training & 25% Testing
-train_size = int(len(X) * 0.75)
-X_train, X_test = X[:train_size], X[train_size:]
-y_train_high, y_test_high = y_high[:train_size], y_high[train_size:]
-y_train_low, y_test_low = y_low[:train_size], y_low[train_size:]
+# Sequence setup
+def create_sequences(data, seq_len):
+    X, y = [], []
+    for i in range(seq_len, len(data)):
+        X.append(data[i - seq_len:i])
+        y.append(data[i])
+    return np.array(X), np.array(y)
 
-# ✅ Define a New LSTM Model for Testing
-model = Sequential([
-    Input(shape=(X_train.shape[1], X_train.shape[2])),  # Input Layer
-    LSTM(50, return_sequences=True),  # LSTM Layer 1
-    Dropout(0.2),  # Dropout Layer 1
-    LSTM(50, return_sequences=False),  # LSTM Layer 2
-    Dropout(0.2),  # Dropout Layer 2
-    Dense(25, activation='relu'),  # Dense Layer
-    Dense(2)  # Output Layer (Predict High & Low Prices)
-])
+seq_len = 60
+X_all, y_all = create_sequences(scaled_data, seq_len)
 
-# ✅ Compile Model
-model.compile(optimizer='adam', loss='mse')
+# Split (same as training)
+total_len = len(X_all)
+train_len = int(total_len * 0.65)
+val_len = int(total_len * 0.10)
+test_start = train_len + val_len
 
-# ✅ Train Model on 75% Data
-model.fit(X_train, np.column_stack((y_train_high, y_train_low)), epochs=50, batch_size=32)
+X_test = X_all[test_start:]
+y_test = y_all[test_start:]
 
-# ✅ Test Model on 25% Data
-y_pred = model.predict(X_test)
+# Load model
+model = load_model("models/lstm_model.keras")
 
-# ✅ Fix: Manually Compute RMSE Instead of Using `squared=False`
-def rmse(y_true, y_pred):
-    return np.sqrt(mean_squared_error(y_true, y_pred))
+# Predict
+y_pred_scaled = model.predict(X_test)
+y_pred = scaler.inverse_transform(y_pred_scaled)
+y_test_actual = scaler.inverse_transform(y_test)
 
-# ✅ Evaluate Model Performance
-rmse_high = rmse(y_test_high, y_pred[:, 0])
-rmse_low = rmse(y_test_low, y_pred[:, 1])
-mae_high = mean_absolute_error(y_test_high, y_pred[:, 0])
-mae_low = mean_absolute_error(y_test_low, y_pred[:, 1])
+# Extract High and Low separately
+y_test_high, y_test_low = y_test_actual[:, 0], y_test_actual[:, 1]
+y_pred_high, y_pred_low = y_pred[:, 0], y_pred[:, 1]
 
-print(f"📊 Model Evaluation:")
-print(f"🔹 RMSE High: {rmse_high:.2f}, RMSE Low: {rmse_low:.2f}")
-print(f"🔹 MAE High: {mae_high:.2f}, MAE Low: {mae_low:.2f}")
+# Evaluation metrics
+def evaluate(y_true, y_pred, label=""):
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    mae = mean_absolute_error(y_true, y_pred)
+    mape = mean_absolute_percentage_error(y_true, y_pred) * 100
+    r2 = r2_score(y_true, y_pred)
+    evs = explained_variance_score(y_true, y_pred)
 
-# ✅ Save the New Trained Model
-model.save("models/lstm_model_test.keras")
-print("✅ Model trained & saved as lstm_model_test.keras")
+    print(f"\n🔹 {label} Price Prediction:")
+    print(f"   ▪️ RMSE  : {rmse:.4f}")
+    print(f"   ▪️ MAE   : {mae:.4f}")
+    print(f"   ▪️ MAPE  : {mape:.2f}%")
+    print(f"   ▪️ R²    : {r2:.4f}")
+    print(f"   ▪️ Explained Variance: {evs:.4f}")
 
-'''
+    # Simple inference
+    if r2 > 0.6:
+        print(f"✅ {label} price prediction is reliable.")
+    elif r2 > 0.2:
+        print(f"⚠️ {label} price prediction is moderately useful, but can be improved.")
+    else:
+        print(f"❌ {label} price prediction is currently not reliable.\n")
+
+evaluate(y_test_high, y_pred_high, "High")
+evaluate(y_test_low, y_pred_low, "Low")
+
+# Plot predictions
+plt.figure(figsize=(14, 6))
+plt.subplot(1, 2, 1)
+plt.plot(y_test_high, label="Actual High", color="skyblue")
+plt.plot(y_pred_high, label="Predicted High", color="darkblue")
+plt.title("High Price Prediction")
+plt.xlabel("Time Steps")
+plt.ylabel("Price")
+plt.legend()
+plt.grid(True)
+
+plt.subplot(1, 2, 2)
+plt.plot(y_test_low, label="Actual Low", color="lightcoral")
+plt.plot(y_pred_low, label="Predicted Low", color="darkred")
+plt.title("Low Price Prediction")
+plt.xlabel("Time Steps")
+plt.ylabel("Price")
+plt.legend()
+plt.grid(True)
+
+# Save and display the figure
+os.makedirs("results", exist_ok=True)
+plot_path = "results/prediction_plot.png"
+plt.tight_layout()
+plt.savefig(plot_path)
+
+# Display the image (for Jupyter/Colab)
+display(Image(filename=plot_path))
