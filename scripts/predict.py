@@ -53,7 +53,7 @@ def predict_prices():
 # ✅ Run prediction
 if __name__ == "__main__":
     predict_prices()
-
+    
 
 
 '''
