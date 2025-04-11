@@ -6,27 +6,29 @@ def create_sequences(data, time_steps=60):
     X, y_high, y_low = [], [], []
     for i in range(len(data) - time_steps):
         X.append(data[i:i + time_steps, :])  
-        y_high.append(data[i + time_steps, 1])  # High price
-        y_low.append(data[i + time_steps, 2])   # Low price
+        y_high.append(data[i + time_steps, 1])  # High column index
+        y_low.append(data[i + time_steps, 2])   # Low column index
     return np.array(X), np.array(y_high), np.array(y_low)
 
-if __name__ == "__main__":
+def preprocess(stock_ticker="AAPL", time_steps=60):
     os.makedirs("data", exist_ok=True)
+    path = f"data/{stock_ticker}_processed.csv"
+    
+    if not os.path.exists(path):
+        print(f"❌ Processed file not found: {path}")
+        return
 
-    # Load processed stock data
-    df = pd.read_csv("data/AAPL_processed.csv", index_col=0)
-
-    # Convert dataframe to numpy array
+    df = pd.read_csv(path, index_col=0)
     data = df.values
-
-    # Convert data into time-series format
-    time_steps = 60  # Use last 60 days to predict next day
+    
     X, y_high, y_low = create_sequences(data, time_steps)
+    
+    np.save(f"data/X_{stock_ticker}.npy", X)
+    np.save(f"data/y_high_{stock_ticker}.npy", y_high)
+    np.save(f"data/y_low_{stock_ticker}.npy", y_low)
 
-    # Save preprocessed data as NumPy arrays
-    np.save("data/X.npy", X)
-    np.save("data/y_high.npy", y_high)
-    np.save("data/y_low.npy", y_low)
+    print(f"✅ Preprocessing complete for {stock_ticker}")
+    print(f"X shape: {X.shape}, y_high shape: {y_high.shape}, y_low shape: {y_low.shape}")
 
-    print("✅ Data preprocessing complete. Shapes:")
-    print(f"X: {X.shape}, y_high: {y_high.shape}, y_low: {y_low.shape}")
+if __name__ == "__main__":
+    preprocess("AAPL")
