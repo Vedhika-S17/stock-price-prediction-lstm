@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 import os
 
-def download_stock_data(ticker='AAPL', start_date='2024-02-03', end_date='2025-02-03', folder='data'):
+def download_stock_data(ticker='AAPL', start_date='2024-02-03', end_date='2025-02-05', folder='data'):
     # Download historical stock data
     data = yf.download(ticker, start=start_date, end=end_date)
     
