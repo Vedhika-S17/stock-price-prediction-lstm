@@ -56,7 +56,7 @@ if __name__ == "__main__":
     df.sort_values('Date', inplace=True)
     
     # Example date to predict for (you can change this)
-    date_input = '2025-02-05'  # Modify as needed
+    date_input = input("Enter a Date (YYYY-MM-DD): ")  # Modify as needed
     
     try:
         high, low = predict_price(date_input, df)
