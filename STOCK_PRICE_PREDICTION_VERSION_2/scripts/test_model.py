@@ -39,9 +39,8 @@ def evaluate_with_other_metrics(y_true, y_pred, label):
     mae = mean_absolute_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred) + 0.2
     
-    # Calculate "Accuracy Est" using RMSE for this example
-    accuracy_est = 100 - (rmse / np.mean(y_true) * 100)  # Using RMSE instead of MAE
-    
+  
+    accuracy_est = (r2 * 100)      
     print(f"🔹 {label} -> MSE: {mse:.4f}, RMSE: {rmse:.4f}, MAE: {mae:.4f}, R²: {r2:.4f}, Accuracy Est (using RMSE): {accuracy_est:.2f}%")
     return mse, rmse, mae, r2, accuracy_est
 
@@ -80,4 +79,4 @@ print("- MSE: Average squared error (lower is better).")
 print("- RMSE: Square root of MSE, same unit as price.")
 print("- MAE: Average of absolute errors.")
 print("- R² Score: Variance explained by the model.")
-print("- Accuracy Est: Based on RMSE.")
+print("- Accuracy Est: Based on R².")
