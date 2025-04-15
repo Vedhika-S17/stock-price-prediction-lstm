@@ -1,59 +1,53 @@
-import pandas as pd
+import os
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
 import joblib
+from sklearn.preprocessing import MinMaxScaler
 
-def preprocess_data():
-    # Load raw data
-    df = pd.read_csv("data/AAPL_RAW.csv")
+# === Parameters ===
+sequence_length = 30
+feature_cols = ['Close', 'High', 'Low', 'Open', 'Volume']
+data_path = 'data/AAPL_stock_data.csv'
 
-    # Print the column names to inspect if they match
-    print("Columns in raw data:", df.columns)
+# === Load Data ===
+df = pd.read_csv(data_path)
+df['Date'] = pd.to_datetime(df['Date'])
+df.sort_values('Date', inplace=True)
 
-    # Check the first few rows of the data to understand the structure
-    print("First few rows of the raw data:")
-    print(df.head())
+# === Feature Scaling ===
+feature_scaler = MinMaxScaler()
+scaled_features = feature_scaler.fit_transform(df[feature_cols])
+joblib.dump(feature_scaler, 'data/feature_scaler.pkl')
 
-    # Assuming 'Date' column is present, ensure it's correctly formatted
-    # Adjust if necessary (remove extra spaces, incorrect headers, etc.)
-    df.columns = df.columns.str.strip()  # Remove any extra spaces in column names
-    if 'Date' in df.columns:
-        df['Date'] = pd.to_datetime(df['Date'])
-        df.set_index('Date', inplace=True)
-    else:
-        print("The 'Date' column was not found. Please check the raw data.")
-        return
+# === Target Scaling ===
+high_scaler = MinMaxScaler()
+low_scaler = MinMaxScaler()
+scaled_high = high_scaler.fit_transform(df[['High']][sequence_length:])
+scaled_low = low_scaler.fit_transform(df[['Low']][sequence_length:])
+joblib.dump(high_scaler, 'data/high_scaler.pkl')
+joblib.dump(low_scaler, 'data/low_scaler.pkl')
 
-    # Use only relevant columns (High, Low, Open, Close, Volume)
-    data = df[["High", "Low", "Open", "Close", "Volume"]].values
+# === Create Sequences ===
+X = []
+y_high = []
+y_low = []
 
-    # Scale the features (X: Open, Close, Volume) and targets (y: High, Low)
-    scaler_X = MinMaxScaler()
-    scaler_y = MinMaxScaler()
+for i in range(sequence_length, len(df) - 1):
+    X.append(scaled_features[i - sequence_length:i])
+    y_high.append(df['High'].iloc[i + 1])  # predict next day's high
+    y_low.append(df['Low'].iloc[i + 1])    # predict next day's low
 
-    # Scale X (features) and y (targets)
-    scaled_data = scaler_X.fit_transform(data[:, 2:])  # Open, Close, Volume (features)
-    scaled_target = scaler_y.fit_transform(data[:, :2])  # High, Low (targets)
+X = np.array(X)
+y_high = high_scaler.transform(np.array(y_high).reshape(-1, 1)).flatten()
+y_low = low_scaler.transform(np.array(y_low).reshape(-1, 1)).flatten()
 
-    # Create sequences
-    def create_sequences(data, target, seq_len):
-        X, y_high, y_low = [], [], []
-        for i in range(seq_len, len(data)):
-            X.append(data[i - seq_len:i])  # Sequence of features
-            y_high.append(target[i, 0])  # High price
-            y_low.append(target[i, 1])   # Low price
-        return np.array(X), np.array(y_high), np.array(y_low)
+# === Save Preprocessed Data ===
+os.makedirs('data', exist_ok=True)
+np.save('data/scaled_data.npy', X)
+np.save('data/y_high.npy', y_high)
+np.save('data/y_low.npy', y_low)
 
-    seq_len = 60
-    X, y_high, y_low = create_sequences(scaled_data, scaled_target, seq_len)
-
-    # Save preprocessed data and scalers
-    joblib.dump(scaler_X, "models/scaler_X.save")
-    joblib.dump(scaler_y, "models/scaler_y.save")
-
-    np.save("models/X.npy", X)
-    np.save("models/y_high.npy", y_high)
-    np.save("models/y_low.npy", y_low)
-
-if __name__ == "__main__":
-    preprocess_data()
+print("✅ Preprocessing complete.")
+print(f"📦 Scaled data shape: {X.shape}")
+print(f"🎯 Target output shape (y_high): {y_high.shape}")
+print(f"🎯 Target output shape (y_low): {y_low.shape}")
