@@ -32,20 +32,23 @@ pred_low_inv = low_scaler.inverse_transform(pred_low.reshape(-1, 1)).flatten()
 y_test_high_inv = high_scaler.inverse_transform(y_test_high.reshape(-1, 1)).flatten()
 y_test_low_inv = low_scaler.inverse_transform(y_test_low.reshape(-1, 1)).flatten()
 
-# Evaluation function
-def evaluate(y_true, y_pred, label):
+# Evaluation function using RMSE for Accuracy Est
+def evaluate_with_other_metrics(y_true, y_pred, label):
     mse = mean_squared_error(y_true, y_pred)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(y_true, y_pred)
     r2 = r2_score(y_true, y_pred)
-    acc = 100 - (mae / np.mean(y_true) * 100)
-    print(f"🔹 {label} -> MSE: {mse:.4f}, RMSE: {rmse:.4f}, MAE: {mae:.4f}, R²: {r2:.4f}, Accuracy Est: {acc:.2f}%")
-    return mse, rmse, mae, r2, acc
+    
+    # Calculate "Accuracy Est" using RMSE for this example
+    accuracy_est = 100 - (rmse / np.mean(y_true) * 100)  # Using RMSE instead of MAE
+    
+    print(f"🔹 {label} -> MSE: {mse:.4f}, RMSE: {rmse:.4f}, MAE: {mae:.4f}, R²: {r2:.4f}, Accuracy Est (using RMSE): {accuracy_est:.2f}%")
+    return mse, rmse, mae, r2, accuracy_est
 
-# Evaluate both models
-print("\n📊 Evaluation Metrics:")
-evaluate(y_test_high_inv, pred_high_inv, "High Price")
-evaluate(y_test_low_inv, pred_low_inv, "Low Price")
+# Evaluate both models using the updated accuracy
+print("\n📊 Evaluation Metrics (Using RMSE for Accuracy Est):")
+evaluate_with_other_metrics(y_test_high_inv, pred_high_inv, "High Price")
+evaluate_with_other_metrics(y_test_low_inv, pred_low_inv, "Low Price")
 
 # Plot predictions vs actual values
 os.makedirs("plots", exist_ok=True)
@@ -77,4 +80,4 @@ print("- MSE: Average squared error (lower is better).")
 print("- RMSE: Square root of MSE, same unit as price.")
 print("- MAE: Average of absolute errors.")
 print("- R² Score: Variance explained by the model.")
-print("- Accuracy Est: Based on deviation from mean.")
+print("- Accuracy Est: Based on RMSE.")
